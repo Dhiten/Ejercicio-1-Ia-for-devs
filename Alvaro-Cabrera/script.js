@@ -1,9 +1,11 @@
 // script.js
-// Lógica de validación del formulario
 
-document.addEventListener('DOMContentLoaded', () => {
+// Esperamos a que todo el contenido del DOM esté cargado
+// (En este caso el script está al final del body, pero esto asegura
+// que el código se ejecute cuando los elementos ya existen)
+document.addEventListener('DOMContentLoaded', function () {
+    // Referencias a los elementos del formulario y mensajes
     const form = document.getElementById('registrationForm');
-
     const usernameInput = document.getElementById('username');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -13,63 +15,141 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordError = document.getElementById('passwordError');
     const successMessage = document.getElementById('successMessage');
 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault(); // Evita que el formulario se envíe y recargue la página
-
-        // 1. Limpiar mensajes previos
+    /**
+     * Limpia todos los mensajes de error y el mensaje de éxito.
+     * Esto se hace al inicio de cada intento de envío del formulario
+     * para no mezclar errores antiguos con los nuevos.
+     */
+    function clearMessages() {
         usernameError.textContent = '';
         emailError.textContent = '';
         passwordError.textContent = '';
         successMessage.textContent = '';
+    }
 
-        // 2. Obtener valores actuales de los campos
-        const username = usernameInput.value.trim();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value.trim();
+    /**
+     * Muestra un mensaje de error en el div correspondiente
+     * y se asegura de que el texto se vea en color rojo.
+     * @param {HTMLElement} element - El div donde se mostrará el error.
+     * @param {string} message - El mensaje de error a mostrar.
+     */
+    function showError(element, message) {
+        element.textContent = message;
+        element.style.color = 'red';
+    }
 
-        let isValid = true;
+    /**
+     * Muestra el mensaje de éxito cuando todas las validaciones pasan.
+     * @param {string} message - El mensaje de éxito a mostrar.
+     */
+    function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.style.color = 'green';
+    }
 
-        // 3. Validación de Nombre de Usuario
-        if (username.length === 0) {
-            usernameError.textContent = 'El nombre de usuario es obligatorio.';
-            isValid = false;
-        } else if (username.length < 5) {
-            usernameError.textContent = 'El nombre de usuario debe tener al menos 5 caracteres.';
-            isValid = false;
-        }
-
-        // 4. Validación de Email
-        // Expresión regular sugerida por la IA para validar formato de email básico.
+    /**
+     * Función de validación del email usando una expresión regular sencilla.
+     * No es perfecta, pero es suficiente para una validación básica.
+     * @param {string} email
+     * @returns {boolean} true si el email tiene un formato válido, false si no.
+     */
+    function isValidEmail(email) {
+        // Expresión regular básica: algo@algo.algo
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailPattern.test(email);
+    }
 
-        if (email.length === 0) {
-            emailError.textContent = 'El email es obligatorio.';
-            isValid = false;
-        } else if (!emailPattern.test(email)) {
-            emailError.textContent = 'El formato de email no es válido.';
-            isValid = false;
+    /**
+     * Función para validar la contraseña con los requerimientos:
+     * - Al menos 8 caracteres
+     * - Al menos una letra mayúscula
+     * - Al menos un número
+     * @param {string} password
+     * @returns {object} { isValid: boolean, error: string | null }
+     */
+    function validatePassword(password) {
+        if (password.length < 8) {
+            return {
+                isValid: false,
+                error: 'La contraseña debe tener al menos 8 caracteres.',
+            };
         }
 
-        // 5. Validación de Contraseña
-        if (password.length === 0) {
-            passwordError.textContent = 'La contraseña es obligatoria.';
-            isValid = false;
-        } else if (password.length < 8) {
-            passwordError.textContent = 'La contraseña debe tener al menos 8 caracteres.';
-            isValid = false;
-        } else {
-            const hasUppercase = /[A-Z]/.test(password);
-            const hasNumber = /[0-9]/.test(password);
+        // Al menos una mayúscula
+        const hasUppercase = /[A-Z]/.test(password);
 
-            if (!hasUppercase || !hasNumber) {
-                passwordError.textContent = 'La contraseña debe contener al menos una letra mayúscula y un número.';
-                isValid = false;
+        // Al menos un número
+        const hasNumber = /[0-9]/.test(password);
+
+        if (!hasUppercase) {
+            return {
+                isValid: false,
+                error: 'La contraseña debe contener al menos una letra mayúscula.',
+            };
+        }
+
+        if (!hasNumber) {
+            return {
+                isValid: false,
+                error: 'La contraseña debe contener al menos un número.',
+            };
+        }
+
+        return { isValid: true, error: null };
+    }
+
+    // Agregamos el listener al evento submit del formulario
+    form.addEventListener('submit', function (event) {
+        // Prevenimos que el formulario recargue la página
+        event.preventDefault();
+
+        // Limpiamos mensajes anteriores
+        clearMessages();
+
+        // Obtenemos los valores actuales de los campos
+        const usernameValue = usernameInput.value.trim();
+        const emailValue = emailInput.value.trim();
+        const passwordValue = passwordInput.value; // No usamos trim en contraseña por si el espacio fuera intencional
+
+        // Variable bandera para saber si todo es válido
+        let isFormValid = true;
+
+        // --- Validación de nombre de usuario ---
+        if (!usernameValue) {
+            showError(usernameError, 'El nombre de usuario es obligatorio.');
+            isFormValid = false;
+        } else if (usernameValue.length < 5) {
+            showError(
+                usernameError,
+                'El nombre de usuario debe tener al menos 5 caracteres.'
+            );
+            isFormValid = false;
+        }
+
+        // --- Validación de email ---
+        if (!emailValue) {
+            showError(emailError, 'El email es obligatorio.');
+            isFormValid = false;
+        } else if (!isValidEmail(emailValue)) {
+            showError(emailError, 'Introduce un email con un formato válido.');
+            isFormValid = false;
+        }
+
+        // --- Validación de contraseña ---
+        if (!passwordValue) {
+            showError(passwordError, 'La contraseña es obligatoria.');
+            isFormValid = false;
+        } else {
+            const passwordCheck = validatePassword(passwordValue);
+            if (!passwordCheck.isValid) {
+                showError(passwordError, passwordCheck.error);
+                isFormValid = false;
             }
         }
 
-        // 6. Si todo es válido, mostrar éxito y limpiar formulario
-        if (isValid) {
-            successMessage.textContent = '¡Registro exitoso! El formulario se ha enviado correctamente.';
+        // Si todo es válido, mostramos el mensaje de éxito y reseteamos el formulario
+        if (isFormValid) {
+            showSuccess('Registro exitoso. ¡Bienvenido!');
             form.reset();
         }
     });
